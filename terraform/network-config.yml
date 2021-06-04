@@ -1,0 +1,6 @@
+version: 2
+ethernets:
+  ens3:
+    # dhcp4: false
+    addresses:
+      - 10.10.26.20/24

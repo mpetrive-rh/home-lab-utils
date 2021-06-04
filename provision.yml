@@ -1,0 +1,9 @@
+- import_playbook: terraform-deploy.yml
+
+- import_playbook: initial-networking.yml
+
+- import_playbook: tower-install.yml
+  
+- import_playbook: platform-configure.yml
+
+- import_playbook: dns-configure.yml

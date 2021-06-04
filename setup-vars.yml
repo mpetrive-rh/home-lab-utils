@@ -1,0 +1,46 @@
+---
+
+_tower_installer_web: https://releases.ansible.com/ansible-tower/setup-bundle
+tower_version: 3.8.2-1
+_tower_archive_base: "ansible-tower-setup-bundle-{{ tower_version }}"
+_tower_install_loc: "{{ _tower_installer_web }}/{{ _tower_archive_base }}.tar.gz"
+
+_installer_dir: .installer
+
+ssh_key_file: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa"
+
+rhn_username: "{{ lookup('env', 'RHSM_USERNAME') }}"
+rhn_password: "{{ lookup('env', 'RHSM_PASSWORD') }}"
+
+terraform_project_dir: ./terraform
+terraform_project_state_file: terraform.tfstate
+
+# minimum of 3 (tower+ah+db)
+terraform_machine_count: 4
+
+_tower_installer:
+  # tower cluster size.  terraform_machine_count 
+  cluster_size: 1
+  default_password: password
+  passwords_to_default: 
+    - admin_password 
+    - pg_password
+    - automationhub_admin_password
+    - automationhub_pg_password
+  default_port: 5432
+  ports_to_default:
+    - pg_port
+    - automationhub_pg_port
+  db_hosts_to_default:
+    - pg_host
+    - automationhub_pg_host
+
+rhn_pool_id: 8a85f99976622bce01766c2ca1873d6b
+
+dns_server: 192.168.1.101
+dns_key: ZGsKv1q+m7WtH8O7PdSfCXyFXjOIJIPiWklrigvj+wE6tyuoVU6HNZIt5t1nXrzigMxAhIZZsDsDmAvPFDiVkg==
+dns_tower_zone: tower.local
+
+
+ah_token: "eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJhZDUyMjdhMy1iY2ZkLTRjZjAtYTdiNi0zOTk4MzVhMDg1NjYifQ.eyJpYXQiOjE2MTc5MTg1NjYsImp0aSI6ImQwYWRmOTcwLWI0ZTAtNGViZS1hODJhLTVkZDc2ZGRlM2NmNSIsImlzcyI6Imh0dHBzOi8vc3NvLnJlZGhhdC5jb20vYXV0aC9yZWFsbXMvcmVkaGF0LWV4dGVybmFsIiwiYXVkIjoiaHR0cHM6Ly9zc28ucmVkaGF0LmNvbS9hdXRoL3JlYWxtcy9yZWRoYXQtZXh0ZXJuYWwiLCJzdWIiOiJmOjUyOGQ3NmZmLWY3MDgtNDNlZC04Y2Q1LWZlMTZmNGZlMGNlNjpyaG4tZ3BzLW1wZXRyaXZlIiwidHlwIjoiT2ZmbGluZSIsImF6cCI6ImNsb3VkLXNlcnZpY2VzIiwibm9uY2UiOiI3ZDJjZWRkZC0yMDU2LTQzNjktOGE3OS1kODU2Zjk5Y2E3MDkiLCJzZXNzaW9uX3N0YXRlIjoiZDhjMjllNDUtMDIzNi00OGMwLWIzMDktN2E0MDc3YWFlZGU5Iiwic2NvcGUiOiJvcGVuaWQgb2ZmbGluZV9hY2Nlc3MifQ.mIU44XuSt5458SH5zwnfPj1uzB116Duq0oJfhoWxQyg"
+ah_galaxy_reqts_file: requirements.yml

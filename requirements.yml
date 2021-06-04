@@ -1,0 +1,7 @@
+collections:
+  - redhat_cop.tower_utilities
+  - redhat_cop.tower_configuration
+  - fedora.linux_system_roles
+  - awx.awx
+  - containers.podman
+  - recordsansible.ara

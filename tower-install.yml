@@ -1,0 +1,42 @@
+- name: tower install
+  hosts: localhost
+  gather_facts: no
+  vars_files: setup-vars.yml
+  tags: install
+  tasks:
+  - name: create installer dir
+    file:
+      path: "{{ _installer_dir }}"
+      state: directory
+
+  - name: get installer
+    get_url:
+      url: "{{ _tower_install_loc }}"
+      dest: "{{ _installer_dir }}/{{ _tower_archive_base }}.tar.gz"
+
+  - name: extract installer
+    command: "tar xzf {{ _tower_archive_base }}.tar.gz"
+    args:
+      chdir: "{{ _installer_dir }}"
+      creates: "{{ _tower_archive_base }}"
+
+  - name: remove localhost from inventory file
+    lineinfile:
+      state: absent
+      path: "{{ _installer_dir }}/{{ _tower_archive_base }}/inventory"
+      regex: "^localhost .*"
+
+  - name: generate install inventory
+    copy: 
+      dest: "{{ _installer_dir }}/{{ _tower_archive_base }}/inventory-gen.yml"
+      content: "{{ _inv_content }}"
+    vars:
+      _inv_cmd: >
+        ansible-inventory -i {{ _installer_dir }}/{{ _tower_archive_base }}/inventory 
+        -i terraform-inventory.py --list --export -y
+      _inv_content: "{{ lookup('pipe', _inv_cmd) }}"
+
+  - name: run install
+    command: ./setup.sh -i inventory-gen.yml
+    args:
+      chdir: "{{ _installer_dir }}/{{ _tower_archive_base }}"

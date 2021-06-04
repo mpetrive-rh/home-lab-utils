@@ -1,0 +1,34 @@
+- name: initial host setup
+  hosts: all
+  become: true
+  vars_files: setup-vars.yml
+  vars:
+    subnet: 24
+  collections:
+    - fedora.linux_system_roles
+  tasks:
+  - name: register RHEL
+    redhat_subscription:
+      state: present
+      username: "{{ rhn_username }}"
+      password: "{{ rhn_password }}"
+      auto_attach: true
+    tags: rhn
+
+  - include_role:
+      name: network
+      apply:
+        tags: net
+    vars:
+      #provider: initscripts
+      network_allow_restarts: yes
+      _ip_addr: "{{ public_ip }}/{{ subnet }}"
+      network_connections:
+        - name: eth1
+          state: up
+          type: ethernet
+          interface_name: eth1
+          ip:
+            address: "{{ _ip_addr }}"
+            gateway4: "{{ _ip_addr | ipaddr('host') | ipaddr('1') | ipaddr('address') }}"
+    tags: net

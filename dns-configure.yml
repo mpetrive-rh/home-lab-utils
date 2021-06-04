@@ -1,0 +1,14 @@
+- hosts: all
+  become: no
+  vars_files: setup-vars.yml
+  tags: dns
+  tasks:
+    - nsupdate:
+        key_name: lab
+        key_secret: "{{ dns_key }}"
+        server: "{{ dns_server }}"
+        record: "{{ group_names[0] }}"
+        value: "{{ public_ip }}"
+        zone: "{{ dns_tower_zone }}"
+      delegate_to: localhost
+

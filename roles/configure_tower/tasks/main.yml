@@ -1,0 +1,36 @@
+---
+- name: Create a new token using username/password
+  awx.awx.tower_token:
+    tower_host: "{{ tower_url }}"
+    validate_certs: no
+    description: "Tower Token"
+    scope: "write"
+    state: present
+    tower_username: "{{ tower_username }}"
+    tower_password: "{{ tower_password }}"
+
+# move to tower_settings module
+- ansible.builtin.uri:
+    method: PATCH
+    body_format: json
+    url: "{{ tower_url }}/api/v2/settings/system/"
+    validate_certs: no
+    headers:
+      Authorization: "Bearer {{ tower_token.token }}"
+    body:
+      TOWER_URL_BASE: "{{ tower_url }}/"
+      SUBSCRIPTIONS_USERNAME: "{{ rhn_username }}"
+      SUBSCRIPTIONS_PASSWORD: "{{ rhn_password }}"
+
+- ansible.builtin.uri:
+    method: POST
+    body_format: json
+    # NOTE: End point exists in AWX
+    url: "{{ tower_url }}/api/v2/config/attach/"
+    validate_certs: no
+    headers:
+      Authorization: "Bearer {{ tower_token.token }}"
+    body:
+      #NOTE: use sub mgr registrations to determine pool id dynamically
+      pool_id: "{{ rhn_pool_id }}"
+      eula_accepted: true

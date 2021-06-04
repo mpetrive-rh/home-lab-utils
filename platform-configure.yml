@@ -1,0 +1,89 @@
+- name: tower configuration
+  hosts: localhost
+  vars_files: setup-vars.yml
+  tags: configure
+  collections:
+    - awx.awx
+  tasks:
+  - include_role:
+      name: configure_tower
+    vars:
+      #tower_url: HOSTVAR
+      tower_username: admin
+      tower_password: "{{ admin_password }}"
+      #rhn_username|password|pool_id: VAR FILE
+
+- hosts: automationhub
+  gather_facts: no
+  #connection: local
+  tags: configure
+  vars_files: setup-vars.yml
+  vars:
+    ah_token_ds: 
+      # from vars file
+      token: "{{ ah_token }}"
+    ah_galaxy_reqt_file:
+      # from vars file
+      requirements_file: "{{ lookup('file', ah_galaxy_reqts_file) }}"
+    ah_base_url: "https://{{ ansible_host }}"
+  tasks:
+    - name: get AH token
+      uri:
+        method: POST
+        url: "{{ ah_base_url }}/api/galaxy/v3/auth/token/"
+        url_username: admin
+        url_password: password
+        validate_certs: no
+        body_format: json
+      register: ah_token_req
+      
+    - name: repo token management
+      module_defaults:
+        uri:
+          body_format: json
+          validate_certs: no
+          headers:
+            Authorization: "Token {{ ah_token_req.json.token }}"   
+      block:
+        - name: get current rh-certfied configuration
+          uri:
+            method: GET
+            url: "{{ ah_base_url }}/api/galaxy/content/rh-certified/v3/sync/config/"
+          register: sync_config
+
+        - name: update token value
+          uri:
+            method: PUT
+            url: "{{ ah_base_url }}/api/galaxy/content/rh-certified/v3/sync/config/"
+            body: "{{ sync_config.json | combine(ah_token_ds) }}"
+          register: sync_config
+
+        - name: start sync
+          uri:
+            method: POST
+            url: "{{ ah_base_url }}/api/galaxy/content/rh-certified/v3/sync/"
+          register: sync_config
+
+        - name: get current galaxy configuration
+          uri:
+            method: GET
+            url: "{{ ah_base_url }}/api/galaxy/content/community/v3/sync/config/"
+          register: sync_config1
+
+        # WARNING REQUIRES jq to be installed
+        - shell: echo '{{ sync_config1.json | to_json }}' | jq 'del(.auth_url)'
+          register: sync_config1_clean
+          delegate_to: localhost
+
+        - name: update token value
+          uri:
+            method: PUT
+            url: "{{ ah_base_url }}/api/galaxy/content/community/v3/sync/config/"
+            body: "{{ sync_config1_clean.stdout | from_json }}"
+
+        - name: start sync
+          uri:
+            method: POST
+            url: "{{ ah_base_url }}/api/galaxy/content/community/v3/sync/"
+          register: sync_config
+          

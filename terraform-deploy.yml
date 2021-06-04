@@ -1,0 +1,36 @@
+- name: terraform povisioning
+  hosts: localhost
+  gather_facts: no
+  tags: provision
+  vars_files: setup-vars.yml
+  tasks:
+  - name: delete infra
+    terraform:
+      project_path: "{{ terraform_project_dir }}/"
+      state: absent
+      variables:
+        rhel_count: "{{ terraform_machine_count }}"
+        ssh_key: "{{ ssh_key_file }}.pub"
+    when: provision_destroy | default(false)
+
+  - name: create infra and wait until terraform outputs are returns
+    terraform:
+      project_path: "{{ terraform_project_dir }}/"
+      state: present
+      variables:
+        rhel_count: "{{ terraform_machine_count }}"
+        ssh_key: "{{ ssh_key_file }}.pub"
+    register: terra_provision
+    until: terra_provision.changed and terra_provision.outputs.ipv4address.value | length == terraform_machine_count
+    retries: 10
+    delay: 6
+
+  - name: update dynamic inventory
+    meta: refresh_inventory
+
+  - name: wait for newly provisioned hosts
+    wait_for_connection: 
+      delay: 2
+      timeout: 120
+    delegate_to: "{{ item }}"
+    loop: "{{ groups.all }}"

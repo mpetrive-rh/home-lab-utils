@@ -1,0 +1,112 @@
+---
+
+- hosts: podman
+  gather_facts: no
+  collections:
+  - containers.podman
+  - recordsansible.ara
+  tasks:
+    - ansible.builtin.package:
+        name: podman
+        state: latest
+      become: true
+
+    - file:
+        state: directory
+        path: /opt/jenkins
+        mode: 0777
+      become: true
+
+    - name: DEPLOY JENKINS
+      block:
+      - name: deploy jenkins container
+        podman_container:
+          name: jenkins
+          hostname: jenkins
+          image: jenkins/jenkins
+          state: stopped
+          #command: -b 0.0.0.0
+          publish:
+            - 8080:8080
+            - 50000:50000
+          volume:
+            - /opt/jenkins:/var/jenkins_home
+          # volume:
+          # env:
+          #   KEYCLOAK_USER: "{{ rhsso_config.admin_username }}"
+          #   KEYCLOAK_PASSWORD: "{{ rhsso_config.admin_password }}"
+        tags: jenkins_deploy
+      
+      - command: cat /opt/jenkins/secrets/initialAdminPassword
+        register: jenkins_key
+        ignore_errors: yes
+      - debug: var=jenkins_key
+
+    # tasks file for deploy_rhsso
+    - name: DEPLOY KEYCLOAK/SSO
+      block:
+      - name: deploy keycloak container
+        containers.podman.podman_container:
+          name: keycloak
+          hostname: keyclock
+          image: jboss/keycloak
+          command: -b 0.0.0.0
+          publish:
+            - 80:8080
+            - 443:8443
+          env:
+            KEYCLOAK_USER: "admin" # {{ rhsso_config.admin_username }}"
+            KEYCLOAK_PASSWORD: "password" #{{ rhsso_config.admin_password }}"
+
+    - name: Create LDAP container
+      podman_container:
+        name: "ldap"
+        image: osixia/openldap:latest
+        hostname: "ldap"
+        ports:
+          - 389:389
+          - 636:636
+        env:
+          LDAP_ORGANISATION: "acme"
+          LDAP_DOMAIN: "tower.local"
+          LDAP_ADMIN_PASSWORD: "password"
+
+    - name: Create PhpLdapAdmin container
+      podman_container:
+        name: ldap_admin
+        image: osixia/phpldapadmin:latest
+        hostname: ldap_admin
+        # networks:
+        #   - name: wf_net
+        ports:
+          - 4443:443
+        env:
+          PHPLDAPADMIN_LDAP_HOSTS: "ldap"
+
+    - name: create ARA API container
+      podman_container:
+        name: ara
+        state: "{{ item }}"
+        image: recordsansible/ara-api:latest
+        hostname: ara
+        # networks:
+        #   - name: wf_net
+        ports:
+          - 8000:8000
+        # NOTE this doesn't work.  need to modify /opt/ara/settings.yaml in container or ~/.ara/server/settings.yaml
+        env:
+          ALLOWED_HOSTS: '[ "*" ]'
+      tags: ara
+      loop:
+        - absent
+        - started
+
+    # - name: install ara
+    #   include_role:
+    #     name: ara_api
+    #   loop:
+    #   - ara_api
+    #   - ara_web
+
+
+
